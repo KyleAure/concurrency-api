@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -88,6 +88,9 @@ public class TransactionServlet extends TestServlet {
 		cancelledTask.cancelTask();
 		// continue to run if possible.
 		cancelledTask.resume();
+		// wait for complete
+		TestUtil.waitForTaskComplete(future);
+		// verify rollback
 		int afterTransacted = Util.getCount(Constants.TABLE_P, Constants.USERNAME, Constants.PASSWORD);
 		assertEquals(originTableCount, afterTransacted,"task was not properly cancelled");
 	}
