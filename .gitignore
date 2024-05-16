@@ -12,3 +12,4 @@ nb-configuration.xml
 .checkstyle
 api/.flattened-pom.xml
 .envrc
+bin/

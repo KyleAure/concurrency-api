@@ -1,0 +1,55 @@
+# This workflow automates the updating of versions in a variety of files
+
+name: Next development cycle
+
+on: 
+  workflow_dispatch:
+    inputs:
+      vNow: 
+        description: 'Current version (example 3.1.0-SNAPSHOT)'
+        required: true
+      vNext:
+        description: 'Next version (example 3.2.0-SNAPSHOT)'
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - name: Set up JDK 17
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          cache: maven
+      - name: Checkout branch
+        id: checkout
+        run: .github/scripts/checkout.sh update-versions-${{ github.sha }}
+      - name: Update project maven files
+        run: |
+          mvn versions:set -DnewVersion=${{ github.event.inputs.vNext }}
+          mvn versions:commit
+
+          mvn versions:set -f ./tck-dist/src/main/starter/pom.xml -DnewVersion=$vNextRelease
+          mvn versions:commit -f ./tck-dist/src/main/starter/pom.xml
+      - name: Update sample project files
+        run: |
+          vNowCopy=${{ github.event.inputs.vNow }}
+          vNowRelease=${vNowCopy%-*} #3.1.0-SNAPSHOT > 3.1.0
+
+          vNextCopy=${{ github.event.inputs.vNext }}
+          vNextRelease=${vNextCopy%-*} #3.2.0-SNAPSHOT > 3.2.0
+
+          sed -i "s/<jakarta.concurrent.version>$vNowRelease/<jakarta.concurrent.version>$vNextRelease/" ./tck-dist/src/main/starter/pom.xml
+          sed -i "s/:APIVersion: $vNowRelease/:APIVersion: $vNextRelease/" ./tck-dist/src/main/asciidoc/concurrency-tck-reference-guide.adoc
+
+  pull-request:
+    needs: [update]
+    uses: ./.github/workflows/pull-request.yml
+    with:
+      branch: 'update-versions-${{ github.sha }}'
+      title: 'Update version for next development cycle'
+      body: 'generated pull request'
